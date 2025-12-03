@@ -7,3 +7,7 @@ build/
 *.tar
 *.pyd
 *.egg-info
+media/
+out_bin/
+test_results/
+__pycache__/

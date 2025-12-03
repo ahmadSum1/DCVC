@@ -151,7 +151,8 @@ def run_one_point_with_stream(p_frame_net, i_frame_net, args):
 
     use_two_entropy_coders = pic_height * pic_width > 1280 * 720
     i_frame_net.set_use_two_entropy_coders(use_two_entropy_coders)
-    p_frame_net.set_use_two_entropy_coders(use_two_entropy_coders)
+    if not args['force_intra']:
+        p_frame_net.set_use_two_entropy_coders(use_two_entropy_coders)
 
     frame_types = []
     psnrs = []
