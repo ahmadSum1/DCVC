@@ -1,0 +1,13 @@
+{
+    "root_path": "media/data/",
+    "test_classes": {
+        "MyTest": {
+            "test": 1,
+            "base_path": "my_test",
+            "src_type": "yuv420",
+            "sequences": {
+                "360_biker.yuv": {"width": 7680, "height": 3840, "frames": 150, "intra_period": -1}
+            }
+        }
+    }
+}
