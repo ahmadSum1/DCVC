@@ -1,0 +1,17 @@
+{
+    "root_path": "./media/data/",
+    "test_classes": {
+        "MyImage": {
+            "test": 1,
+            "base_path": "my_image_test",
+            "src_type": "png",
+            "sequences": {
+                "360_sailboat.png": {"width": 5888, "height": 2944, "frames": 1, "intra_period": 1},
+                "PXL_20251201_215435214.png": {"width": 4080, "height": 3072, "frames": 1, "intra_period": 1},
+                "PXL_20251202_120747511.png": {"width": 4080, "height": 3072, "frames": 1, "intra_period": 1},
+                "PXL_20251202_145209023.png": {"width": 4080, "height": 3072, "frames": 1, "intra_period": 1},
+                "PXL_20251203_132646139.png": {"width": 4080, "height": 3072, "frames": 1, "intra_period": 1}
+            }
+        }
+    }
+}

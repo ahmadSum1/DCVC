@@ -323,6 +323,11 @@ def run_one_point_with_stream(p_frame_net, i_frame_net, args):
 
     if save_decoded_frame:
         recon_writer.close()
+        if args['src_type'] == 'png':
+            src_png = os.path.join(args['bin_folder'], "im00001.png")
+            dst_png = args['curr_bin_path'].replace('.bin', '.png')
+            if os.path.exists(src_png):
+                os.rename(src_png, dst_png)
 
     test_time = time.time() - start_time
     test_time_frame_numuber = len(encoding_time)

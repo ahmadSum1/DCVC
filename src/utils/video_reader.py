@@ -13,13 +13,18 @@ class PNGReader():
         self.src_path = src_path
         self.width = width
         self.height = height
-        pngs = os.listdir(self.src_path)
-        if 'im1.png' in pngs:
-            self.padding = 1
-        elif 'im00001.png' in pngs:
-            self.padding = 5
+        self.is_single_file = os.path.isfile(src_path)
+        
+        if self.is_single_file:
+            self.padding = 0
         else:
-            raise ValueError('unknown image naming convention; please specify')
+            pngs = os.listdir(self.src_path)
+            if 'im1.png' in pngs:
+                self.padding = 1
+            elif 'im00001.png' in pngs:
+                self.padding = 5
+            else:
+                raise ValueError('unknown image naming convention; please specify')
         self.current_frame_index = start_num
 
     def read_one_frame(self):
@@ -27,12 +32,18 @@ class PNGReader():
         if self.eof:
             return None
 
-        png_path = os.path.join(self.src_path,
-                                f"im{str(self.current_frame_index).zfill(self.padding)}.png"
-                                )
-        if not os.path.exists(png_path):
-            self.eof = True
-            return None
+        if self.is_single_file:
+            if self.current_frame_index > 1: # Only read once for single file
+                self.eof = True
+                return None
+            png_path = self.src_path
+        else:
+            png_path = os.path.join(self.src_path,
+                                    f"im{str(self.current_frame_index).zfill(self.padding)}.png"
+                                    )
+            if not os.path.exists(png_path):
+                self.eof = True
+                return None
 
         rgb = Image.open(png_path).convert('RGB')
         rgb = np.asarray(rgb).astype(np.uint8).transpose(2, 0, 1)
