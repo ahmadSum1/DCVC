@@ -147,7 +147,7 @@ class DMCI(CompressionModel):
         self.q_scale_y_dec = nn.Parameter(torch.ones((self.qp_num(), g_ch_y)))
         self._initialize_weights()
 
-    def forward_one_frame(self, x, qp, recon_only=False, q_maps=None):
+    def forward_one_frame(self, x, qp, recon_only=False, q_maps=None, latent_mask=None):
         curr_q_enc = self.index_select_dim0(self.q_scale_enc, qp)
         curr_q_dec = self.index_select_dim0(self.q_scale_dec, qp)
         curr_y_q_enc = self.index_select_dim0(self.q_scale_y_enc, qp)
@@ -158,6 +158,9 @@ class DMCI(CompressionModel):
             curr_q_enc, curr_q_dec, curr_y_q_enc, curr_y_q_dec = q_maps
 
         y = self.enc(x, curr_q_enc)
+        if latent_mask is not None:
+            # optional encoder-side scaling of y (e.g. saliency masking), before the hyperprior
+            y = y * latent_mask
         z = self.hyper_enc(y)
         z_hat = QuantFunc.apply(z)
 
@@ -220,8 +223,9 @@ class DMCI(CompressionModel):
             np.frombuffer(bit_stream, dtype=np.uint8), qp, sps['height'], sps['width'], ec_part)
         return {'x_hat': x_hat}
 
-    def forward(self, x, qp, lambdas=None, get_loss_info=False, recon_only=False):
-        result = self.forward_one_frame(x, qp, recon_only)
+    def forward(self, x, qp, lambdas=None, get_loss_info=False, recon_only=False,
+                latent_mask=None):
+        result = self.forward_one_frame(x, qp, recon_only, latent_mask=latent_mask)
         loss = loss_func(result, lambdas)
         info = None
         if get_loss_info:
