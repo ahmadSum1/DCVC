@@ -147,7 +147,8 @@ class DMCI(CompressionModel):
         self.q_scale_y_dec = nn.Parameter(torch.ones((self.qp_num(), g_ch_y)))
         self._initialize_weights()
 
-    def forward_one_frame(self, x, qp, recon_only=False, q_maps=None, latent_mask=None):
+    def forward_one_frame(self, x, qp, recon_only=False, q_maps=None, latent_mask=None,
+                          no_noise=False):
         curr_q_enc = self.index_select_dim0(self.q_scale_enc, qp)
         curr_q_dec = self.index_select_dim0(self.q_scale_dec, qp)
         curr_y_q_enc = self.index_select_dim0(self.q_scale_y_enc, qp)
@@ -178,8 +179,13 @@ class DMCI(CompressionModel):
         if recon_only:
             return x_hat
 
-        y_for_bit = self.add_noise(y_res)
-        z_for_bit = self.add_noise(z)
+        if no_noise:
+            # deterministic rate estimate on the quantized symbols (evaluation)
+            y_for_bit = y_q
+            z_for_bit = z_hat
+        else:
+            y_for_bit = self.add_noise(y_res)
+            z_for_bit = self.add_noise(z)
         bits_y = self.get_y_bits(y_for_bit, scales_hat)
         bits_z = self.get_z_bits(z_for_bit, qp)
 
