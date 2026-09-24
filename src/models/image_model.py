@@ -147,11 +147,15 @@ class DMCI(CompressionModel):
         self.q_scale_y_dec = nn.Parameter(torch.ones((self.qp_num(), g_ch_y)))
         self._initialize_weights()
 
-    def forward_one_frame(self, x, qp, recon_only=False):
+    def forward_one_frame(self, x, qp, recon_only=False, q_maps=None):
         curr_q_enc = self.index_select_dim0(self.q_scale_enc, qp)
         curr_q_dec = self.index_select_dim0(self.q_scale_dec, qp)
         curr_y_q_enc = self.index_select_dim0(self.q_scale_y_enc, qp)
         curr_y_q_dec = self.index_select_dim0(self.q_scale_y_dec, qp)
+        if q_maps is not None:
+            # optional (q_enc, q_dec, y_q_enc, y_q_dec) overrides, e.g. spatial
+            # [B, C, h, w] quality maps; they broadcast like the [B, C, 1, 1] vectors
+            curr_q_enc, curr_q_dec, curr_y_q_enc, curr_y_q_dec = q_maps
 
         y = self.enc(x, curr_q_enc)
         z = self.hyper_enc(y)
