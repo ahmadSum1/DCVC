@@ -13,7 +13,8 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
     py::class_<DMCIProxy>(m, "DMCIProxy")
         .def(py::init<>())
         .def("set_param", &DMCIProxy::set_param)
-        .def("compress", &DMCIProxy::compress)
+        .def("compress", &DMCIProxy::compress, py::arg("x"), py::arg("qp"), py::arg("padding_b"),
+             py::arg("padding_r"), py::arg("latent_mask") = py::none())
         .def("decompress", &DMCIProxy::decompress);
 
     py::class_<DMCHTLProxy>(m, "DMCHTLProxy")

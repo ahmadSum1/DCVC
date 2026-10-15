@@ -204,7 +204,9 @@ class DMCI(CompressionModel):
             'bits_z': bits_z,
         }
 
-    def compress(self, x, qp, padding_b, padding_r):
+    def compress(self, x, qp, padding_b, padding_r, latent_mask=None):
+        # latent_mask (optional): [1, 1, yH, yW] multiplier on y channels 64..255, applied in the
+        # proxy right after the encoder (as forward_one_frame(latent_mask=...)); None = upstream
         if self.proxy is None:
             try:
                 from inference_extensions_cuda import DMCIProxy
@@ -217,7 +219,7 @@ class DMCI(CompressionModel):
             state_dict = self.add_cdf_to_state_dict(state_dict)
             self.proxy = DMCIProxy()
             self.proxy.set_param(state_dict, self.gaussian_encoder.skip_thres)
-        bit_stream, x_hat, ec_parallel = self.proxy.compress(x, qp, padding_b, padding_r)
+        bit_stream, x_hat, ec_parallel = self.proxy.compress(x, qp, padding_b, padding_r, latent_mask)
         return {
             'bit_stream': bit_stream.tobytes(),
             'x_hat': x_hat,

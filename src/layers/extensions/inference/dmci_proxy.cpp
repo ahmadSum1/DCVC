@@ -293,13 +293,30 @@ DMCIProxy::~DMCIProxy()
     clear_cuda_graph();
 }
 
-py::tuple DMCIProxy::compress(const at::Tensor& x, const int qp, const int padding_b, const int padding_r)
+py::tuple DMCIProxy::compress(const at::Tensor& x, const int qp, const int padding_b, const int padding_r,
+                              const std::optional<at::Tensor>& latent_mask)
 {
     pre_allocate_tensors(x.size(2), x.size(3));
     m_result_ready = false;
     m_qp = qp;
 
     auto stream = at::cuda::getCurrentCUDAStream();
+
+    // latent mask: written into the persistent buffer outside the captured graph (like x below)
+    if (latent_mask.has_value()) {
+        const auto& lm = latent_mask.value();
+        const int yH = m_latent_mask.size(2);
+        const int yW = m_latent_mask.size(3);
+        TORCH_CHECK(lm.dim() == 4 && lm.size(0) == 1 && lm.size(1) == 1 && lm.size(2) == yH
+                        && lm.size(3) == yW,
+                    "latent_mask must be [1, 1, ", yH, ", ", yW, "]");
+        m_latent_mask.narrow(1, 0, g_latent_mask_k).fill_(1);
+        m_latent_mask.narrow(1, g_latent_mask_k, g_ch_y - g_latent_mask_k)
+            .copy_(lm.to(m_latent_mask.device(), m_latent_mask.scalar_type())
+                       .expand({ 1, g_ch_y - g_latent_mask_k, yH, yW }));
+    } else {
+        m_latent_mask.fill_(1);
+    }
 
     // must NOT use cuda graph because x.data_ptr() is non-const
     m_enc_unshuffle_out = pad_and_unshuffle_8_cuda(x, padding_b, padding_r, m_enc_unshuffle_out);
@@ -308,6 +325,8 @@ py::tuple DMCIProxy::compress(const at::Tensor& x, const int qp, const int paddi
     auto lambda_enc_0 = [&](const int qp) {
         // encoder → y
         auto y = m_encoder.forward(m_enc_unshuffle_out, m_q_scale_enc[qp]);
+        // latent mask (ones by default): before the hyper encoder and before y * q_scale_y_enc
+        y.mul_(m_latent_mask);
         auto y_pad = pad_for_y(y, m_y_pad);
         // hyper encoder → z → z_hat
         auto z = m_hyper_encoder.forward(y_pad);
@@ -788,6 +807,7 @@ void DMCIProxy::pre_allocate_tensors(const int height, const int width)
 
     // pre allocate sub-module tensors
     m_y = m_encoder.pre_allocate_tensors(m_enc_unshuffle_out);
+    m_latent_mask = at::ones_like(m_y);
     m_y_pad = (padR == 0 && padB == 0) ? m_y : at::empty(y_pad_shape, options);
     m_hyper_encoder.pre_allocate_tensors(m_y_pad);
     m_hyper_decoder.pre_allocate_tensors(m_z_hat, m_hyper_params);

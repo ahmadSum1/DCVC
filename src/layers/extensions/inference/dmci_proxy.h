@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <optional>
+
 #include "dmc_common.h"
 #include "layers_proxy.h"
 
@@ -139,7 +141,12 @@ public:
     DMCIProxy();
     ~DMCIProxy();
 
-    py::tuple compress(const at::Tensor& x, const int qp, const int padding_b, const int padding_r);
+    // latent_mask (optional, skb-test): [1, 1, yH, yW] multiplier applied to y channels
+    // g_latent_mask_k .. g_ch_y-1 right after the encoder (before the hyper encoder and q_scale_y_enc),
+    // as in DMCI.forward_one_frame(latent_mask=...). None = all ones = upstream bitstream.
+    static constexpr int g_latent_mask_k = 64;
+    py::tuple compress(const at::Tensor& x, const int qp, const int padding_b, const int padding_r,
+                       const std::optional<at::Tensor>& latent_mask = std::nullopt);
     at::Tensor decompress(const py::array_t<uint8_t>& bit_stream, const int qp, const int height,
                           const int width, const int entropy_coder_parallel);
     void set_param(const std::map<std::string, at::Tensor>& state_dict, const float skip_threshold);
@@ -221,6 +228,7 @@ private:
     at::Tensor m_mask_3;
     at::Tensor m_enc_unshuffle_out;
     at::Tensor m_y;
+    at::Tensor m_latent_mask;  // persistent [1, g_ch_y, H16, W16] multiplier, ones = no mask
     at::Tensor m_y_pad;
     at::Tensor m_z_hat;
     at::Tensor m_z_hat_io;
